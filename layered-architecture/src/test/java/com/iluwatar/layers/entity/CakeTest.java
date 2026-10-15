@@ -45,6 +45,15 @@ import org.junit.jupiter.api.Test;
 class CakeTest {
 
   @Test
+  void testDiagnosticPreviewDelegatesToView() {
+    final var cake = new Cake();
+    final var rendered = new java.util.concurrent.atomic.AtomicBoolean();
+    cake.renderPreview(() -> rendered.set(true));
+    assertTrue(rendered.get());
+  }
+
+
+  @Test
   void testSetId() {
     final var cake = new Cake();
     assertNull(cake.getId());
