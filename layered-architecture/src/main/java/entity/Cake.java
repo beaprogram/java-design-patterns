@@ -37,7 +37,7 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Cake entity. */
+/** Cake entity in the data layer; presentation remains the responsibility of the view layer. */
 @Entity
 @Getter
 @Setter
