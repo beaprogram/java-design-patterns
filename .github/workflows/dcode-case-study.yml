@@ -1,0 +1,82 @@
+name: DCode architecture case study
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [case-study/layered-architecture]
+    paths:
+      - 'layered-architecture/**'
+      - '.github/workflows/dcode-case-study.yml'
+      - '.github/scripts/dcode-case-study-result.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dcode-case-study-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  case-study:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set Java 21 for the subject project
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Compile and test the selected module
+        run: mvn -B -pl layered-architecture -am test
+      - name: Preserve test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-tests-${{ github.sha }}
+          path: layered-architecture/target/surefire-reports/
+          if-no-files-found: warn
+      - name: Set Java 25 for Designite
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Generate source analysis and dependency graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location https://www.designite-tools.com/assets/DesigniteJava.jar --output "$RUNNER_TEMP/DesigniteJava.jar"
+          echo "8324e6d1a5fc706295a3f46d3124c69e458315ebfbe62c1e364f48e2ca45e73b  $RUNNER_TEMP/DesigniteJava.jar" | sha256sum --check
+          java -jar "$RUNNER_TEMP/DesigniteJava.jar" -i layered-architecture/src/main/java -o designite-output -g -d
+          test -s designite-output/DependencyGraph.graphml
+      - name: Preserve analyzer evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: designite-reports-${{ github.sha }}
+          path: designite-output/
+          if-no-files-found: error
+      - name: Upload and enforce the architecture result
+        env:
+          DCODE_API_KEY: ${{ secrets.DCODE_API_KEY }}
+          DCODE_PROJECT_ID: ${{ vars.DCODE_PROJECT_ID }}
+          DCODE_ENFORCE_ARCH: ${{ vars.DCODE_ENFORCE_ARCH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${DCODE_API_KEY:?Set DCODE_API_KEY secret}"
+          : "${DCODE_PROJECT_ID:?Set DCODE_PROJECT_ID variable}"
+          forms=()
+          index=1
+          for file in designite-output/*.csv designite-output/*.graphml; do
+            test -f "$file"
+            forms+=(--form "file${index}=@${file}")
+            index=$((index + 1))
+          done
+          curl --fail --silent --show-error \
+            --header "X-API-Key: $DCODE_API_KEY" \
+            --header "X-Commit-ID: $GITHUB_SHA" \
+            --header "X-Tool: designiteJava" \
+            "${forms[@]}" \
+            "https://dcodehub.com/api/projects/${DCODE_PROJECT_ID}/upload/" \
+            --output "$RUNNER_TEMP/dcode-response.json"
+          python3 .github/scripts/dcode-case-study-result.py
