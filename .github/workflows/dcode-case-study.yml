@@ -28,7 +28,9 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Compile and test the selected module
-        run: mvn -B -pl layered-architecture -am test
+        run: |
+          ./mvnw --version
+          ./mvnw -B -pl layered-architecture -am test
       - name: Preserve test evidence
         if: always()
         uses: actions/upload-artifact@v4
