@@ -59,11 +59,6 @@ public class Cake {
     this.layers.add(layer);
   }
 
-  /** Deliberate local architecture probe: make a data entity request presentation. */
-  public void renderPreview(view.View preview) {
-    preview.render();
-  }
-
   @Override
   public String toString() {
     return String.format("id=%s topping=%s layers=%s", id, topping, layers.toString());
