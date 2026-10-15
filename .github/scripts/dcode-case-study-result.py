@@ -5,6 +5,7 @@ from pathlib import Path
 
 response = json.loads((Path(os.environ['RUNNER_TEMP']) / 'dcode-response.json').read_text())
 gate = response.get('architecture_gate', {})
+Path('dcode-result.json').write_text(json.dumps({'commit': os.environ['GITHUB_SHA'], 'architecture_gate': gate}, indent=2))
 print('Commit:', os.environ['GITHUB_SHA'])
 print('Architecture gate:', json.dumps(gate))
 mode = os.environ.get('DCODE_ENFORCE_ARCH', '')

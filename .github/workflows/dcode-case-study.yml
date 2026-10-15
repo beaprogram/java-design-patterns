@@ -82,3 +82,10 @@ jobs:
             "https://dcodehub.com/api/projects/${DCODE_PROJECT_ID}/upload/" \
             --output "$RUNNER_TEMP/dcode-response.json"
           python3 .github/scripts/dcode-case-study-result.py
+      - name: Preserve commit-linked architecture result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-result-${{ github.sha }}
+          path: dcode-result.json
+          if-no-files-found: ignore
